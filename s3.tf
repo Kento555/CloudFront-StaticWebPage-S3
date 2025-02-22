@@ -17,6 +17,7 @@ resource "aws_s3_bucket_ownership_controls" "s3_ownership" {
   }
 }
 
+# Attach a bucket policy allowing cloudfront to access
 resource "aws_s3_bucket_policy" "allow_cloudfront" {
   bucket = aws_s3_bucket.static_site_bucket.id
   policy = jsonencode({
@@ -34,9 +35,16 @@ resource "aws_s3_bucket_policy" "allow_cloudfront" {
   })
 }
 
-output "bucket_name" {
-  value = aws_s3_bucket.static_site_bucket.bucket
+
+# Create a VPC Endpoint for S3 access
+resource "aws_vpc_endpoint" "s3_vpce" {
+  vpc_id       = var.vpc_id
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  # route_table_ids = [data.aws_route_table.example.id]
+  route_table_ids = ["rtb-00b6acf595122a64e"]  # Replace with the correct Route Table ID
 }
+
 
 # Clone the GitHub repository and upload content to S3
 resource "null_resource" "clone_and_upload" {
@@ -51,3 +59,8 @@ resource "null_resource" "clone_and_upload" {
   # Ensure the S3 bucket is created before running the script
   depends_on = [aws_s3_bucket.static_site_bucket]
 }
+
+output "bucket_name" {
+  value = aws_s3_bucket.static_site_bucket.bucket
+}
+
